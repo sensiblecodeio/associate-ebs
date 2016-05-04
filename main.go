@@ -51,7 +51,7 @@ func main() {
 
 	tick := time.NewTicker(100 * time.Millisecond).C
 
-	timeout := 5 * time.Second
+	timeout := 1 * time.Minute
 	deadline := time.After(timeout)
 	start := time.Now()
 
