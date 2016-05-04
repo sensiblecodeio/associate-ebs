@@ -19,6 +19,11 @@ func main() {
 
 	volumeID, deviceName := os.Args[1], os.Args[2]
 
+	if exists(deviceName) {
+		log.Printf("Device %q already present, exiting", deviceName)
+		return
+	}
+
 	s := session.New()
 
 	meta := ec2metadata.New(s)
@@ -62,10 +67,15 @@ func main() {
 			log.Fatalf("associate-ebs: device did not attach after %v", timeout)
 		}
 
-		if _, err := os.Stat(deviceName); err == nil {
+		if exists(deviceName) {
 			log.Printf("Attached in %v", time.Since(start))
 			// Success
 			return
 		}
 	}
+}
+
+func exists(path string) bool {
+	_, err := os.Stat(path)
+	return err == nil
 }
