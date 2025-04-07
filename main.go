@@ -26,19 +26,19 @@ func main() {
 		return
 	}
 
-	cfg, err := config.LoadDefaultConfig(context.TODO())
+	cfg, err := config.LoadDefaultConfig(context.Background())
 	if err != nil {
 		log.Fatalf("associate-ebs: unable to load config: %v", err)
 	}
 
 	imdsClient := imds.NewFromConfig(cfg)
 
-	regionOutput, err := imdsClient.GetRegion(context.TODO(), &imds.GetRegionInput{})
+	regionOutput, err := imdsClient.GetRegion(context.Background(), &imds.GetRegionInput{})
 	if err != nil {
 		log.Fatalf("associate-ebs: unable to determine region failed: %v", err)
 	}
 
-	instanceIDOutput, err := imdsClient.GetMetadata(context.TODO(), &imds.GetMetadataInput{Path: "instance-id"})
+	instanceIDOutput, err := imdsClient.GetMetadata(context.Background(), &imds.GetMetadataInput{Path: "instance-id"})
 	if err != nil {
 		log.Fatalf("associate-ebs: unable to determine instance id: %v", err)
 	}
@@ -58,7 +58,7 @@ func main() {
 		Device:     aws.String(deviceName),
 	}
 
-	attachment, err := svc.AttachVolume(context.TODO(), args)
+	attachment, err := svc.AttachVolume(context.Background(), args)
 
 	if err != nil {
 		log.Fatalf("associate-ebs: AttachVolume failed: %v", err)
