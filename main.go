@@ -1,14 +1,16 @@
 package main
 
 import (
+	"context"
+	"io"
 	"log"
 	"os"
 	"time"
 
-	"github.com/aws/aws-sdk-go/aws"
-	"github.com/aws/aws-sdk-go/aws/ec2metadata"
-	"github.com/aws/aws-sdk-go/aws/session"
-	"github.com/aws/aws-sdk-go/service/ec2"
+	"github.com/aws/aws-sdk-go-v2/aws"
+	"github.com/aws/aws-sdk-go-v2/config"
+	"github.com/aws/aws-sdk-go-v2/feature/ec2/imds"
+	"github.com/aws/aws-sdk-go-v2/service/ec2"
 )
 
 func main() {
@@ -24,21 +26,31 @@ func main() {
 		return
 	}
 
-	s := session.New()
+	cfg, err := config.LoadDefaultConfig(context.Background())
+	if err != nil {
+		log.Fatalf("associate-ebs: unable to load config: %v", err)
+	}
 
-	meta := ec2metadata.New(s)
+	imdsClient := imds.NewFromConfig(cfg)
 
-	region, err := meta.Region()
+	regionOutput, err := imdsClient.GetRegion(context.Background(), &imds.GetRegionInput{})
 	if err != nil {
 		log.Fatalf("associate-ebs: unable to determine region failed: %v", err)
 	}
 
-	instanceID, err := meta.GetMetadata("instance-id")
+	instanceIDOutput, err := imdsClient.GetMetadata(context.Background(), &imds.GetMetadataInput{Path: "instance-id"})
 	if err != nil {
 		log.Fatalf("associate-ebs: unable to determine instance id: %v", err)
 	}
+	defer instanceIDOutput.Content.Close()
 
-	svc := ec2.New(s, &aws.Config{Region: aws.String(region)})
+	instanceIDBytes, err := io.ReadAll(instanceIDOutput.Content)
+	if err != nil {
+		log.Fatalf("associate-ebs: unable to read instance id bytes: %v", err)
+	}
+	instanceID := string(instanceIDBytes)
+
+	svc := ec2.NewFromConfig(aws.Config{Region: regionOutput.Region})
 
 	args := &ec2.AttachVolumeInput{
 		InstanceId: aws.String(instanceID),
@@ -46,13 +58,13 @@ func main() {
 		Device:     aws.String(deviceName),
 	}
 
-	attachment, err := svc.AttachVolume(args)
+	attachment, err := svc.AttachVolume(context.Background(), args)
 
 	if err != nil {
 		log.Fatalf("associate-ebs: AttachVolume failed: %v", err)
 	}
 
-	log.Printf("Attachment State: %q", *attachment.State)
+	log.Printf("Attachment State: %q", attachment.State)
 
 	tick := time.NewTicker(100 * time.Millisecond).C
 
