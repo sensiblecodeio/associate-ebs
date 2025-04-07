@@ -37,6 +37,7 @@ func main() {
 	if err != nil {
 		log.Fatalf("associate-ebs: unable to determine region failed: %v", err)
 	}
+	cfg.Region = regionOutput.Region
 
 	instanceIDOutput, err := imdsClient.GetMetadata(context.Background(), &imds.GetMetadataInput{Path: "instance-id"})
 	if err != nil {
@@ -50,7 +51,7 @@ func main() {
 	}
 	instanceID := string(instanceIDBytes)
 
-	svc := ec2.NewFromConfig(aws.Config{Region: regionOutput.Region})
+	svc := ec2.NewFromConfig(cfg)
 
 	args := &ec2.AttachVolumeInput{
 		InstanceId: aws.String(instanceID),
